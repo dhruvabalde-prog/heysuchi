@@ -16,6 +16,21 @@ export async function createMission(input: { raw: string; title: string; domain:
   return result.data;
 }
 
+export async function saveMissionPlan(missionId: string, tasks: Array<{ title: string; status: string; dependsOn: string[] }>, artifact: { name: string; kind: string; title: string; summary: string; content: string }) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data: mission } = await supabase.from("missions").select("id").eq("id", missionId).eq("owner_id", user.id).single();
+  if (!mission) return false;
+  const ids = tasks.map(() => crypto.randomUUID());
+  const rows = tasks.map((task, index) => ({ id: ids[index], mission_id: missionId, title: task.title, status: task.status === "done" ? "done" : "queued", depends_on: task.dependsOn.map(key => ids[Number(key)]).filter(Boolean), position: index }));
+  const taskResult = await supabase.from("mission_tasks").insert(rows);
+  if (taskResult.error) throw taskResult.error;
+  const artifactResult = await supabase.from("mission_artifacts").insert({ mission_id: missionId, name: artifact.name, kind: artifact.kind, title: artifact.title, summary: artifact.summary, content: artifact.content }).select("id").single();
+  if (artifactResult.error) throw artifactResult.error;
+  return true;
+}
+
 export async function listMissions(): Promise<Mission[]> {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
