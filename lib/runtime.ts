@@ -1,7 +1,6 @@
 export type TaskStatus="queued"|"working"|"needs_you"|"verified"|"blocked"|"done";
-export type MissionTask={id:string;missionId:string;title:string;status:TaskStatus;dependsOn:string[];artifactIds:string[]};
-export type AgentRequest={missionId:string;taskId:string;capability:"reasoning"|"research"|"writing"|"browser"|"code"|"workspace";input:string};
-export type AgentResult={summary:string;artifact?:string};
+export type AgentRequest={missionId:string;taskId:string;capability:"reasoning"|"research"|"writing"|"browser"|"code"|"workspace";input:string;handoff?:string};
+export type AgentResult={summary:string;artifact?:string;handoff?:string};
 export interface AgentProvider{id:string;canHandle(capability:AgentRequest["capability"]):boolean;execute(request:AgentRequest):Promise<AgentResult>;}
 
 function privacyScreen(input:string){
@@ -14,10 +13,10 @@ function privacyScreen(input:string){
  ];
  return patterns.some(p=>p.test(input));
 }
+const system="You are a HeySuchi execution agent. Work only on the assigned task. Never ask the human to do work that another agent can do. Never request or reveal secrets. Return a concise result plus a useful artifact when appropriate.";
 
 export class AgentRouter{
  constructor(private providers:AgentProvider[]){}
- select(request:AgentRequest){return this.providers.find(p=>p.canHandle(request.capability));}
  all(request:AgentRequest){return this.providers.filter(p=>p.canHandle(request.capability));}
 }
 
@@ -31,16 +30,14 @@ export class GeminiAgent implements AgentProvider{
  id="gemini";
  canHandle(){return true;}
  async execute(request:AgentRequest){
-  if(privacyScreen(request.input)) throw new Error("Sensitive data detected. External AI execution was blocked.");
-  const key=process.env.GEMINI_API_KEY;
+  if(privacyScreen(request.input))throw new Error("Sensitive data detected. External AI execution was blocked.");
+  const key=process.env.GEMINI_API_KEY;if(!key)throw new Error("Gemini is not configured.");
   const model=process.env.GEMINI_MODEL||"gemini-3.8-flash";
-  if(!key)throw new Error("Gemini is not configured.");
-  const response=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":generateContent?key="+encodeURIComponent(key),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({systemInstruction:{parts:[{text:"You are HeySuchi. Execute the requested task concisely. Do not request or reveal secrets. Return a useful artifact when appropriate."}]},contents:[{role:"user",parts:[{text:request.input}]}],generationConfig:{temperature:0.2}})});
+  const response=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":generateContent?key="+encodeURIComponent(key),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:request.input}]}],generationConfig:{temperature:0.2}})});
   if(!response.ok)throw new Error("Gemini provider request failed.");
-  const data=await response.json();
-  const content=data?.candidates?.[0]?.content?.parts?.map((p:any)=>p?.text||"").join("").trim();
+  const data=await response.json();const content=data?.candidates?.[0]?.content?.parts?.map((p:any)=>p?.text||"").join("").trim();
   if(!content)throw new Error("Gemini returned no usable output.");
-  return {summary:content.slice(0,500),artifact:content};
+  return{summary:content.slice(0,500),artifact:content,handoff:content};
  }
 }
 
@@ -49,15 +46,13 @@ export class OpenAIProvider implements AgentProvider{
  canHandle(){return true;}
  async execute(request:AgentRequest){
   if(privacyScreen(request.input))throw new Error("Sensitive data detected. External AI execution was blocked.");
-  const key=process.env.OPENAI_API_KEY;
-  if(!key)throw new Error("OpenAI is not configured.");
+  const key=process.env.OPENAI_API_KEY;if(!key)throw new Error("OpenAI is not configured.");
   const model=process.env.OPENAI_MODEL||"gpt-5.6-terra";
-  const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model,input:[{role:"system",content:[{type:"input_text",text:"You are HeySuchi. Execute the requested task concisely. Do not request or reveal secrets. Return a useful artifact when appropriate."}]},{role:"user",content:[{type:"input_text",text:request.input}]}]})});
+  const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model,input:[{role:"system",content:[{type:"input_text",text:system}]},{role:"user",content:[{type:"input_text",text:request.input}]}]})});
   if(!response.ok)throw new Error("OpenAI provider request failed.");
-  const data=await response.json();
-  const content=typeof data?.output_text==="string"?data.output_text.trim():"";
+  const data=await response.json();const content=typeof data?.output_text==="string"?data.output_text.trim():"";
   if(!content)throw new Error("OpenAI returned no usable output.");
-  return {summary:content.slice(0,500),artifact:content};
+  return{summary:content.slice(0,500),artifact:content,handoff:content};
  }
 }
 
@@ -66,15 +61,13 @@ export class AnthropicProvider implements AgentProvider{
  canHandle(){return true;}
  async execute(request:AgentRequest){
   if(privacyScreen(request.input))throw new Error("Sensitive data detected. External AI execution was blocked.");
-  const key=process.env.ANTHROPIC_API_KEY;
-  if(!key)throw new Error("Anthropic is not configured.");
+  const key=process.env.ANTHROPIC_API_KEY;if(!key)throw new Error("Anthropic is not configured.");
   const model=process.env.ANTHROPIC_MODEL||"claude-sonnet-4-6";
-  const response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},body:JSON.stringify({model,max_tokens:4096,system:"You are HeySuchi. Execute the requested task concisely. Do not request or reveal secrets. Return a useful artifact when appropriate.",messages:[{role:"user",content:request.input}]})});
+  const response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},body:JSON.stringify({model,max_tokens:4096,system,messages:[{role:"user",content:request.input}]})});
   if(!response.ok)throw new Error("Anthropic provider request failed.");
-  const data=await response.json();
-  const content=data?.content?.map((p:any)=>p?.type==="text"?p.text:"").join("").trim();
+  const data=await response.json();const content=data?.content?.map((p:any)=>p?.type==="text"?p.text:"").join("").trim();
   if(!content)throw new Error("Anthropic returned no usable output.");
-  return {summary:content.slice(0,500),artifact:content};
+  return{summary:content.slice(0,500),artifact:content,handoff:content};
  }
 }
 
