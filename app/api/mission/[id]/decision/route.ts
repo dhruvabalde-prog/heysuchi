@@ -7,7 +7,15 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
   const{data:decision,error}=await supabase.from("mission_decisions").update({status:"answered",answer:body.answer,answered_at:new Date().toISOString()}).eq("id",String(body.decisionId)).eq("mission_id",id).eq("status","open").select("*").single();
   if(error)return NextResponse.json({error:error.message},{status:500});
   const proceed=String(body.answer??"").toLowerCase()==="proceed";
-  if(proceed)await supabase.from("missions").update({status:"working",next_action:"Suchi is continuing."}).eq("id",id).eq("owner_id",user.id);
+  if(proceed){
+   const {data:tasks}=await supabase.from("mission_tasks").select("id,status,depends_on,title,position").eq("mission_id",id).order("position");
+   const completed=new Set((tasks??[]).filter(t=>["done","verified"].includes(t.status)).map(t=>t.id));
+   const next=(tasks??[]).find(t=>["queued","working"].includes(t.status)&&(t.depends_on??[]).every((dependency:string)=>completed.has(dependency)));
+   if(next){
+    await supabase.from("mission_tasks").update({status:"working"}).eq("id",next.id).eq("mission_id",id);
+    await supabase.from("missions").update({status:"working",next_action:"Verify: "+next.title}).eq("id",id).eq("owner_id",user.id);
+   }else await supabase.from("missions").update({status:"working",next_action:"Suchi is continuing."}).eq("id",id).eq("owner_id",user.id);
+  }
   else await supabase.from("missions").update({status:"needs_you",next_action:"Waiting for your next decision."}).eq("id",id).eq("owner_id",user.id);
   return NextResponse.json({decision,continued:proceed});
  }
