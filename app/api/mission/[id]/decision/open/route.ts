@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "../../../../../../lib/supabase/admin";
-import { requireIdentity } from "../../../../../../lib/auth";
+import { getSupabaseAdmin } from "../../../../../../../lib/supabase/admin";
+import { requireIdentity } from "../../../../../../../lib/auth";
 export async function POST(request:Request,{params}:{params:Promise<{id:string}>}){
  const {id}=await params; const body=await request.json(); const question=String(body.question??"").trim(); const options=Array.isArray(body.options)?body.options:[];
  if(!question||!options.length)return NextResponse.json({error:"Question and options required."},{status:400});
