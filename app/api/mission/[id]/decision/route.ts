@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "../../../../../../lib/supabase/admin";
-import { requireIdentity } from "../../../../../../lib/auth";
+import { getSupabaseAdmin } from "../../../../lib/supabase/admin";
+import { requireIdentity } from "../../../../lib/auth";
 export async function POST(request:Request,{params}:{params:Promise<{id:string}>}){
  const {id}=await params; const body=await request.json(); const identity=await requireIdentity(); if(!identity)return NextResponse.json({error:"Sign in required."},{status:401});
  const supabase=getSupabaseAdmin(); const {data:mission}=await supabase.from("missions").select("id").eq("id",id).eq("owner_id",identity.id).single(); if(!mission)return NextResponse.json({error:"Mission not found."},{status:404});
