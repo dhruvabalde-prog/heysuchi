@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "../../../../lib/supabase/admin";
-import { requireIdentity } from "../../../../lib/auth";
-import { missionProgress } from "../../../../lib/mission-progress";
+import { getSupabaseAdmin } from "../../../../../lib/supabase/admin";
+import { requireIdentity } from "../../../../../lib/auth";
+import { missionProgress } from "../../../../../lib/mission-progress";
 export async function POST(_:Request,{params}:{params:Promise<{id:string}>}) {
  const {id}=await params; const identity=await requireIdentity(); if(!identity)return NextResponse.json({error:"Sign in required."},{status:401});
  const supabase=getSupabaseAdmin(); const {data:mission}=await supabase.from("missions").select("id").eq("id",id).eq("owner_id",identity.id).single();
