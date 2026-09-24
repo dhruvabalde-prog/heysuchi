@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../../../lib/supabase/server";
 
+import { needsApproval } from "../../../../../../lib/decision";
+
 const SIDE_EFFECTS=/\b(buy|purchase|pay|book|reserve|send|email|message|publish|post|delete|cancel|submit|hire|invite|transfer)\b/i;
 
 export async function POST(_:Request,{params}:{params:Promise<{id:string}>}) {
@@ -15,7 +17,7 @@ export async function POST(_:Request,{params}:{params:Promise<{id:string}>}) {
   const completed=new Set((tasks??[]).filter(t=>["done","verified"].includes(t.status)).map(t=>t.id));
   const task=(tasks??[]).find(t=>t.status==="queued" && (t.depends_on??[]).every((dependency:string)=>completed.has(dependency)));
   if(!task)return NextResponse.json({message:"No dependency-ready task is available."});
-  if(SIDE_EFFECTS.test(task.title)){
+  if(SIDE_EFFECTS.test(task.title) && needsApproval(task.title).required){
     const {data:openDecision}=await supabase.from("mission_decisions").select("id,question,options,status").eq("mission_id",id).eq("status","open").limit(1).maybeSingle();
     if(!openDecision){
       const {data:decision,error:decisionError}=await supabase.from("mission_decisions").insert({mission_id:id,question:"This step creates an external side effect. Should Suchi proceed?",options:["Proceed","Not now"],status:"open"}).select("id,question,options,status").single();
