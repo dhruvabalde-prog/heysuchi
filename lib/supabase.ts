@@ -1,9 +1,16 @@
 import { createClient } from "@supabase/supabase-js";
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+const secretKey = process.env.SUPABASE_SECRET_KEY;
 
 export function getSupabase() {
-  if (!url || !key) return null;
-  return createClient(url, key);
+  if (!url || !secretKey) return null;
+
+  return createClient(url, secretKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
 }
