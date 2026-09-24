@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { seedMissions } from "../lib/demo";
 import type { Mission } from "../lib/types";
 
 export default function Home() {
@@ -10,14 +9,18 @@ export default function Home() {
   const [dump, setDump] = useState("");
   const [sent, setSent] = useState(false);
   const [listening, setListening] = useState(false);
-  const [missions] = useState<Mission[]>(seedMissions);
+  const [missions, setMissions] = useState<Mission[]>([]);
 
-  function submit() {
+  useEffect(() => {
+    fetch("/api/mission").then(r => r.json()).then(data => setMissions(data.missions ?? [])).catch(() => {});
+  }, []);
+
+  async function submit() {
     if (!dump.trim()) return;
-    const words = dump.trim().replace(/[.!?]+$/,"").split(/\s+/);
-    const title = words.slice(0,9).join(" ") + (words.length > 9 ? "…" : "");
-    const mission: Mission = { id:crypto.randomUUID(), title, raw:dump.trim(), domain:/family|home|personal|health|trip|house/i.test(dump) ? "Life" : "Work", status:"working", progress:8, createdAt:"Just now", nextAction:"Suchi is turning your outcome into an execution plan." };
-    localStorage.setItem("heysuchi:last-mission", JSON.stringify(mission));
+    const res = await fetch("/api/mission", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({raw:dump.trim()}) });
+    const data = await res.json();
+    if (!res.ok) return;
+    localStorage.setItem("heysuchi:last-mission", JSON.stringify(data.mission));
     setSent(true);
     setTimeout(() => router.push("/mission"), 350);
   }
@@ -44,6 +47,7 @@ export default function Home() {
     </section>
     <section className="section"><div className="sectionHead"><div><p className="eyebrow">YOUR MISSIONS</p><h2>In motion</h2></div><button className="textButton">View all →</button></div>
       <div className="cards">{missions.map(m=><article className="mission" key={m.id} onClick={()=>{localStorage.setItem("heysuchi:last-mission",JSON.stringify(m));router.push("/mission")}}><div className="missionIcon">{m.domain==="Life"?"⌂":"✦"}</div><div className="missionBody"><div className="missionTop"><div><h3>{m.title}</h3><p>{m.domain+" · "+m.status.replace("_"," ")}</p></div><span>{m.progress}%</span></div><div className="bar"><i style={{width:m.progress+"%"}}/></div></div></article>)}</div>
+      {!missions.length && <p className="sub">No missions yet.</p>}
     </section>
     <section className="section lower"><div className="mini"><span>✦</span><div><strong>Suchi principle</strong><p>You make decisions. Suchi handles execution.</p></div></div><div className="mini"><span>◌</span><div><strong>Attention saved</strong><p>2h 18m of work handled this week.</p></div></div></section>
     <nav className="nav"><button className="active">⌂<small>Today</small></button><button>✦<small>Missions</small></button><button>◌<small>Activity</small></button><button>⚙<small>Settings</small></button></nav>
