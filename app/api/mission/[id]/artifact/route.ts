@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "../../../../../lib/supabase/admin";
-import { requireIdentity } from "../../../../../lib/auth";
-import { normalizeArtifact } from "../../../../../lib/artifacts";
+import { getSupabaseAdmin } from "../../../../../../lib/supabase/admin";
+import { requireIdentity } from "../../../../../../lib/auth";
+import { normalizeArtifact } from "../../../../../../lib/artifacts";
 export async function GET(_:Request,{params}:{params:Promise<{id:string}>}) {
  const {id}=await params; const identity=await requireIdentity();
  if(!identity)return NextResponse.json({error:"Sign in required."},{status:401});
