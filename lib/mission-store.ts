@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { getSupabaseAdmin } from "./supabase/admin";
 import { requireIdentity } from "./auth";
 import type { Mission } from "./types";
