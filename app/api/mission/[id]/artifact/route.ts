@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../../../lib/supabase/server";
+import { normalizeArtifact } from "../../../../../../lib/artifacts";
 export async function GET(_:Request,{params}:{params:Promise<{id:string}>}) {
  const {id}=await params; const supabase=await createSupabaseServerClient(); const {data:{user}}=await supabase.auth.getUser();
  if(!user)return NextResponse.json({error:"Sign in required."},{status:401});
@@ -8,6 +9,6 @@ export async function GET(_:Request,{params}:{params:Promise<{id:string}>}) {
  const {data,error}=await supabase.from("mission_artifacts").select("name,content").eq("mission_id",id).order("created_at",{ascending:false}).limit(1).maybeSingle();
  if(error)return NextResponse.json({error:error.message},{status:500});
  if(!data)return NextResponse.json({error:"Artifact not found."},{status:404});
- const filename=(data.name||"mission.md").replace(/[^a-zA-Z0-9._-]/g,"-");
+ const filename=normalizeArtifact({name:data.name||"mission.md",kind:"markdown",title:"Artifact",summary:"",content:data.content||""}).name;
  return new NextResponse(data.content,{headers:{"Content-Type":"text/markdown; charset=utf-8","Content-Disposition":`attachment; filename="${filename}"`,"Cache-Control":"private, no-store"}});
 }
