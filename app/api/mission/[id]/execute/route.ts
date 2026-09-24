@@ -24,7 +24,7 @@ export async function POST(_:Request,{params}:{params:Promise<{id:string}>}) {
  const supabase=getSupabaseAdmin();
  const {data:mission}=await supabase.from("missions").select("id,owner_id,title,raw_input").eq("id",id).eq("owner_id",identity.id).single();
  if(!mission)return NextResponse.json({error:"Mission not found."},{status:404});
- const {data:settings}=await supabase.from("user_settings").select("data").eq("user_id",user.id).eq("realm","personal").maybeSingle();
+ const {data:settings}=await supabase.from("user_settings").select("data").eq("user_id",identity.id).eq("realm","personal").maybeSingle();
  const policy=policyFromSettings(settings);
  const {data:tasks,error}=await supabase.from("mission_tasks").select("id,title,status,position,depends_on").eq("mission_id",id).order("position");
  if(error)return NextResponse.json({error:error.message},{status:500});
