@@ -48,7 +48,7 @@ export async function POST(_:Request,{params}:{params:Promise<{id:string}>}) {
   return NextResponse.json({task:started,status:"blocked",summary:result.summary},{status:503});
  }
 
- let artifact=null;
+ let artifact:any=null;
  if(result.artifact){
   const normalized=normalizeArtifact({name:"mission.md",kind:"task_output",title:task.title,summary:result.summary,content:result.artifact});
   const {data:created,error:artifactError}=await supabase.from("mission_artifacts").insert({mission_id:id,...normalized}).select("*").single();
