@@ -19,21 +19,47 @@ export async function POST(request: Request) {
 
   const words = raw.replace(/[.!?]+$/, "").split(/\s+/);
   const title = words.slice(0, 9).join(" ") + (words.length > 9 ? "…" : "");
-  const domain = /family|home|personal|health|trip|house/i.test(raw) ? "Life" : "Work";
-  const nextAction = "Suchi is turning your outcome into an execution plan.";\n  const tasks = planMission(raw);
+  const domain: "Life" | "Work" = /family|home|personal|health|trip|house/i.test(raw) ? "Life" : "Work";
+  const nextAction = "Suchi is turning your outcome into an execution plan.";
+  const tasks = planMission(raw);
 
   try {
     const mission = await createMission({ raw, title, domain, nextAction });
     if (mission) {
-      const artifact = createMissionBrief({ id: mission.id, title: mission.title, raw: mission.raw_input, domain: mission.domain });
-      return NextResponse.json({ mission: { id: mission.id, title: mission.title, raw: mission.raw_input, domain: mission.domain, status: mission.status, progress: mission.progress, nextAction: mission.next_action }, tasks, artifact });
+      const artifact = createMissionBrief({
+        id: mission.id,
+        title: mission.title,
+        raw: mission.raw_input,
+        domain: mission.domain,
+      });
+      return NextResponse.json({
+        mission: {
+          id: mission.id,
+          title: mission.title,
+          raw: mission.raw_input,
+          domain: mission.domain,
+          status: mission.status,
+          progress: mission.progress,
+          nextAction: mission.next_action,
+        },
+        tasks,
+        artifact,
+      });
     }
   } catch (error) {
     console.error("mission persistence failed", error);
   }
 
   return NextResponse.json({
-    mission: { id: crypto.randomUUID(), title, raw, domain, status: "working", progress: 8, nextAction },
+    mission: {
+      id: crypto.randomUUID(),
+      title,
+      raw,
+      domain,
+      status: "working",
+      progress: 8,
+      nextAction,
+    },
     artifact: createMissionBrief({ id: "local", title, raw, domain }),
     persistence: "local-fallback",
   });
