@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "../../../../../../lib/supabase/server";
+import { getSupabaseAdmin } from "../../../../../../lib/supabase/admin";
+import { requireIdentity } from "../../../../../../lib/auth";
 import { normalizeArtifact } from "../../../../../../lib/artifacts";
 export async function GET(_:Request,{params}:{params:Promise<{id:string}>}) {
- const {id}=await params; const supabase=await createSupabaseServerClient(); const {data:{user}}=await supabase.auth.getUser();
- if(!user)return NextResponse.json({error:"Sign in required."},{status:401});
- const {data:mission}=await supabase.from("missions").select("id").eq("id",id).eq("owner_id",user.id).single();
+ const {id}=await params; const identity=await requireIdentity();
+ if(!identity)return NextResponse.json({error:"Sign in required."},{status:401});
+ const supabase=getSupabaseAdmin();
+ const {data:mission}=await supabase.from("missions").select("id").eq("id",id).eq("owner_id",identity.id).single();
  if(!mission)return NextResponse.json({error:"Mission not found."},{status:404});
  const {data,error}=await supabase.from("mission_artifacts").select("name,content").eq("mission_id",id).order("created_at",{ascending:false}).limit(1).maybeSingle();
  if(error)return NextResponse.json({error:error.message},{status:500});
