@@ -1,0 +1,4 @@
+"use client";
+import {useEffect,useState} from "react"; import styles from "./page.module.css";
+type Item={id:number;action:string;target:string;created_at:string;meta:unknown};
+export default function Activity(){const [items,setItems]=useState<Item[]>([]);useEffect(()=>{fetch("/api/activity").then(r=>r.json()).then(d=>setItems(d.activity??[])).catch(()=>{});},[]);return <main className={styles.page}><a href="/" className={styles.back}>← Today</a><p className="eyebrow">ACTIVITY</p><h1>Quietly handled.</h1><p className={styles.lead}>A compact record of meaningful changes.</p><div className={styles.list}>{items.map(i=><article className={styles.item} key={i.id}><b>{i.action}</b><span>{i.target}</span><small>{new Date(i.created_at).toLocaleString()}</small></article>)}</div>{!items.length&&<div className={styles.empty}>Nothing to report yet.</div>}</main>}
