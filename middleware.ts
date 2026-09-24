@@ -1,3 +1,4 @@
+// Security headers are applied by this Next.js middleware.
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
