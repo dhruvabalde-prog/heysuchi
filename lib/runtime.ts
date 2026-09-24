@@ -18,6 +18,7 @@ function privacyScreen(input:string){
 export class AgentRouter{
  constructor(private providers:AgentProvider[]){}
  select(request:AgentRequest){return this.providers.find(p=>p.canHandle(request.capability));}
+ all(request:AgentRequest){return this.providers.filter(p=>p.canHandle(request.capability));}
 }
 
 export class DeterministicAgent implements AgentProvider{
