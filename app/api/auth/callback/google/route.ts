@@ -32,6 +32,12 @@ export async function GET(request: Request) {
 
     if (identityError || !existing) throw identityError ?? new Error("Could not create identity.");
 
+    const { data: invite } = await supabase.from("platform_admin_invites").select("id,role_id").eq("email", identity.email.toLowerCase()).is("accepted_at", null).maybeSingle();
+    if (invite) {
+      await supabase.from("platform_admin_members").upsert({ identity_id: existing.id, role_id: invite.role_id, granted_by: existing.id }, { onConflict: "identity_id" });
+      await supabase.from("platform_admin_invites").update({ accepted_at: new Date().toISOString() }).eq("id", invite.id);
+    }
+
     // First account bootstraps the platform. After that, admin membership is explicit.
     const { count } = await supabase.from("platform_admin_members").select("identity_id", { count: "exact", head: true });
     if ((count ?? 0) === 0) {
