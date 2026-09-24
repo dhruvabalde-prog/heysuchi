@@ -27,11 +27,7 @@ export async function POST(_:Request,{params}:{params:Promise<{id:string}>}) {
   const {data:started,error:startError}=await supabase.from("mission_tasks").update({status:"working"}).eq("id",task.id).eq("mission_id",id).select("id,title,status,position").single();
   if(startError)return NextResponse.json({error:startError.message},{status:500});
 
-  const artifactContent=`# ${task.title}\n\nHeySuchi prepared the next useful output for this mission.\n\n## Input\n${task.title}\n\n## Status\nPrepared for verification.`;
-  const {data:artifact,error:artifactError}=await supabase.from("mission_artifacts").insert({mission_id:id,name:`task-${task.position+1}.md`,kind:"execution",title:task.title,summary:"Prepared the next useful output.",content:artifactContent}).select("id,name,title,summary,content").single();
-  if(artifactError)return NextResponse.json({error:artifactError.message},{status:500});
-
-  const {error:missionError}=await supabase.from("missions").update({status:"working",next_action:"Verify: "+task.title}).eq("id",id).eq("owner_id",user.id);
+  const {error:missionError}=await supabase.from("missions").update({status:"working",next_action:"Suchi is working on: "+task.title}).eq("id",id).eq("owner_id",user.id);
   if(missionError)return NextResponse.json({error:missionError.message},{status:500});
-  return NextResponse.json({task:started,artifact});
+  return NextResponse.json({task:started});
 }
