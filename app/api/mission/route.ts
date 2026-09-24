@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { createMission, listMissions, saveMissionPlan } from "../../../lib/mission-store";
+import { requireIdentity } from "../../../lib/auth";
 import { planMission } from "../../../lib/task-graph";
 import { createMissionBrief } from "../../../lib/mission-artifact";
 
 export async function GET() {
+ const identity = await requireIdentity();
+ if (!identity) return NextResponse.json({ error: "Sign in required." }, { status: 401, headers: { "Cache-Control": "private, no-store" } });
  try { return NextResponse.json({ missions: await listMissions() }, { headers: { "Cache-Control": "private, no-store" } }); }
  catch (error) { console.error("mission list failed", error); return NextResponse.json({ missions: [] }, { headers: { "Cache-Control": "private, no-store" } }); }
 }
