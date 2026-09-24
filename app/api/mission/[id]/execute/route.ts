@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "../../../../../../lib/supabase/admin";
-import { requireIdentity } from "../../../../../../lib/auth";
-import { needsApproval, type ApprovalMode, type ApprovalRuleKey } from "../../../../../../lib/decision";
-import { inferCapability } from "../../../../../../lib/task-graph";
-import { MissionExecutor } from "../../../../../../lib/executor";
-import { createAgentRouter } from "../../../../../../lib/runtime";
-import { normalizeArtifact } from "../../../../../../lib/artifacts";
-import { deriveMissionState } from "../../../../../../lib/mission-progress";
+import { getSupabaseAdmin } from "../../../../lib/supabase/admin";
+import { requireIdentity } from "../../../../lib/auth";
+import { needsApproval, type ApprovalMode, type ApprovalRuleKey } from "../../../../lib/decision";
+import { inferCapability } from "../../../../lib/task-graph";
+import { MissionExecutor } from "../../../../lib/executor";
+import { createAgentRouter } from "../../../../lib/runtime";
+import { normalizeArtifact } from "../../../../lib/artifacts";
+import { deriveMissionState } from "../../../../lib/mission-progress";
 
 const SIDE_EFFECTS=/\b(buy|purchase|pay|book|reserve|send|email|message|publish|post|delete|cancel|submit|hire|invite|transfer)\b/i;
 const DEFAULT_APPROVALS:Record<ApprovalRuleKey,boolean>={spending:true,external_messages:true,documents:true,deletion:true,travel_booking:true,research:false,code_changes:false};
