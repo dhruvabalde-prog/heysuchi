@@ -30,3 +30,10 @@ The first slice proves the Suchi Loop: capture an outcome, create a mission, exe
 ## Architecture direction
 
 Next.js App Router + TypeScript. The runtime will be provider-agnostic: model, browser, workspace, and automation providers plug into a common agent interface. Persistent mission state, task graphs, artifacts, approvals, verification, memory, and policy will follow.
+
+## Production deployment
+
+The canonical Google sign-in callback is derived from the live HeySuchi origin:
+`/api/auth/callback/google`.
+For production, the Google OAuth client must allow:
+`https://heysuchi.vercel.app/api/auth/callback/google`.
