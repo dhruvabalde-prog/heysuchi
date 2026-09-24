@@ -13,7 +13,7 @@ export async function POST(_:Request,{params}:{params:Promise<{id:string}>}) {
   const {data:tasks,error}=await supabase.from("mission_tasks").select("id,title,status,position,depends_on").eq("mission_id",id).order("position");
   if(error)return NextResponse.json({error:error.message},{status:500});
   const completed=new Set((tasks??[]).filter(t=>["done","verified"].includes(t.status)).map(t=>t.id));
-  const task=(tasks??[]).find(t=>["queued","working"].includes(t.status) && (t.depends_on??[]).every((dependency:string)=>completed.has(dependency)));
+  const task=(tasks??[]).find(t=>t.status==="queued" && (t.depends_on??[]).every((dependency:string)=>completed.has(dependency)));
   if(!task)return NextResponse.json({message:"No dependency-ready task is available."});
   if(SIDE_EFFECTS.test(task.title)){
     const {data:openDecision}=await supabase.from("mission_decisions").select("id,question,options,status").eq("mission_id",id).eq("status","open").limit(1).maybeSingle();
