@@ -1,13 +1,3 @@
-export type CommunicationMode = "concise" | "detailed";
-
-export const attentionPolicy = {
-  defaultMode: "concise" as CommunicationMode,
-  rules: [
-    "Report only meaningful changes.",
-    "Use one-line status updates by default.",
-    "Ask one clear question when human input is required.",
-    "Prefer compact choices over explanations.",
-    "Put deep context, evidence, research and execution logs into artifacts.",
-    "Never narrate internal execution unless the user asks.",
-  ],
-};
+export type CommunicationMode="concise"|"detailed";
+export const attentionPolicy={defaultMode:"concise" as CommunicationMode,rules:["Report only meaningful changes.","Use one-line status updates by default.","Ask one clear question when human input is required.","Prefer compact choices over explanations.","Put deep context, evidence, research and execution logs into artifacts.","Never narrate internal execution unless the user asks."]};
+export function conciseUpdate(event:"started"|"waiting"|"blocked"|"completed",subject:string){const copy={started:"Started",waiting:"Waiting for your decision",blocked:"Blocked",completed:"Completed"};return copy[event]+": "+subject+".";}
