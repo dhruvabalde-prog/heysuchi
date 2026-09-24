@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
-import { createMission } from "../../../lib/mission-store";
+import { createMission, listMissions } from "../../../lib/mission-store";
 import { createMissionBrief } from "../../../lib/mission-artifact";
+
+export async function GET() {
+  try {
+    return NextResponse.json({ missions: await listMissions() });
+  } catch (error) {
+    console.error("mission list failed", error);
+    return NextResponse.json({ missions: [] });
+  }
+}
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -15,9 +24,7 @@ export async function POST(request: Request) {
   try {
     const mission = await createMission({ raw, title, domain, nextAction });
     if (mission) {
-      const artifact = createMissionBrief({
-        id: mission.id, title: mission.title, raw: mission.raw_input, domain: mission.domain,
-      });
+      const artifact = createMissionBrief({ id: mission.id, title: mission.title, raw: mission.raw_input, domain: mission.domain });
       return NextResponse.json({ mission: { id: mission.id, title: mission.title, raw: mission.raw_input, domain: mission.domain, status: mission.status, progress: mission.progress, nextAction: mission.next_action }, artifact });
     }
   } catch (error) {
