@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createMission } from "../../../lib/mission-store";
 import { createMissionBrief } from "../../../lib/mission-artifact";
 
 export async function POST(request: Request) {
@@ -7,16 +8,25 @@ export async function POST(request: Request) {
   if (!raw) return NextResponse.json({ error: "Tell Suchi what outcome you want." }, { status: 400 });
 
   const words = raw.replace(/[.!?]+$/, "").split(/\s+/);
-  const mission = {
-    id: crypto.randomUUID(),
-    title: words.slice(0, 9).join(" ") + (words.length > 9 ? "…" : ""),
-    raw,
-    domain: /family|home|personal|health|trip|house/i.test(raw) ? "Life" : "Work",
-    status: "working",
-    progress: 8,
-    createdAt: new Date().toISOString(),
-    nextAction: "Suchi is turning your outcome into an execution plan.",
-  };
+  const title = words.slice(0, 9).join(" ") + (words.length > 9 ? "…" : "");
+  const domain = /family|home|personal|health|trip|house/i.test(raw) ? "Life" : "Work";
+  const nextAction = "Suchi is turning your outcome into an execution plan.";
 
-  return NextResponse.json({ mission, artifact: createMissionBrief(mission) });
+  try {
+    const mission = await createMission({ raw, title, domain, nextAction });
+    if (mission) {
+      const artifact = createMissionBrief({
+        id: mission.id, title: mission.title, raw: mission.raw_input, domain: mission.domain,
+      });
+      return NextResponse.json({ mission: { id: mission.id, title: mission.title, raw: mission.raw_input, domain: mission.domain, status: mission.status, progress: mission.progress, nextAction: mission.next_action }, artifact });
+    }
+  } catch (error) {
+    console.error("mission persistence failed", error);
+  }
+
+  return NextResponse.json({
+    mission: { id: crypto.randomUUID(), title, raw, domain, status: "working", progress: 8, nextAction },
+    artifact: createMissionBrief({ id: "local", title, raw, domain }),
+    persistence: "local-fallback",
+  });
 }
