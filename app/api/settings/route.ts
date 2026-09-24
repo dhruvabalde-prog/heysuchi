@@ -1,17 +1,6 @@
-import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "../../../lib/supabase/server";
-
-const defaults={autonomy:"approval",approvals:{spending:true,messages:true,documents:true,bookings:true,deletion:true,code:true},notifications:true};
-
-export async function GET(){
- const supabase=await createSupabaseServerClient(); const {data:{user}}=await supabase.auth.getUser(); if(!user)return NextResponse.json({error:"Sign in required."},{status:401});
- const {data,error}=await supabase.from("user_settings").select("data").eq("user_id",user.id).maybeSingle();
- if(error)return NextResponse.json({error:error.message},{status:500});
- return NextResponse.json({settings:{...defaults,...(data?.data??{})},email:user.email??null});
-}
-export async function PATCH(request:Request){
- const supabase=await createSupabaseServerClient(); const {data:{user}}=await supabase.auth.getUser(); if(!user)return NextResponse.json({error:"Sign in required."},{status:401});
- const body=await request.json(); const data={...defaults,...body};
- const {error}=await supabase.from("user_settings").upsert({user_id:user.id,realm:"personal",data,updated_at:new Date().toISOString()});
- if(error)return NextResponse.json({error:error.message},{status:500}); return NextResponse.json({settings:data});
-}
+import {NextResponse} from "next/server";
+import {getSupabaseAdmin} from "../../../lib/supabase/admin";
+import {requireIdentity} from "../../../lib/auth";
+const defaults={autonomy:"approval",approvals:{spending:true,external_messages:true,documents:true,travel_booking:true,deletion:true,research:false,code_changes:false},notifications:true};
+export async function GET(){const identity=await requireIdentity();if(!identity)return NextResponse.json({error:"Sign in required."},{status:401});const {data,error}=await getSupabaseAdmin().from("user_settings").select("data").eq("user_id",identity.id).eq("realm","personal").maybeSingle();if(error)return NextResponse.json({error:error.message},{status:500});return NextResponse.json({settings:{...defaults,...(data?.data??{})},email:identity.email});}
+export async function PATCH(request:Request){const identity=await requireIdentity();if(!identity)return NextResponse.json({error:"Sign in required."},{status:401});const body=await request.json();const data={...defaults,...body};const {error}=await getSupabaseAdmin().from("user_settings").upsert({user_id:identity.id,realm:"personal",data,updated_at:new Date().toISOString()},{onConflict:"user_id,realm"});if(error)return NextResponse.json({error:error.message},{status:500});return NextResponse.json({settings:data});}
