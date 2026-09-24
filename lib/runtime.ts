@@ -4,6 +4,17 @@ export type AgentRequest={missionId:string;taskId:string;capability:"reasoning"|
 export type AgentResult={summary:string;artifact?:string};
 export interface AgentProvider{id:string;canHandle(capability:AgentRequest["capability"]):boolean;execute(request:AgentRequest):Promise<AgentResult>;}
 
+function privacyScreen(input:string){
+ const patterns=[
+  /(?:api[_ -]?key|secret|password|passwd|passcode|otp|one[- ]time code)\s*[:=]\s*\S+/i,
+  /-----BEGIN (?:RSA|EC|OPENSSH|PRIVATE) KEY-----/i,
+  /\b(?:sk|pk)_[a-z0-9_-]{20,}\b/i,
+  /\b(?:\d[ -]*?){13,19}\b/,
+  /\b\d{3}-\d{2}-\d{4}\b/
+ ];
+ return patterns.some(p=>p.test(input));
+}
+
 export class AgentRouter{
  constructor(private providers:AgentProvider[]){}
  select(request:AgentRequest){return this.providers.find(p=>p.canHandle(request.capability));}
@@ -19,10 +30,11 @@ export class GeminiAgent implements AgentProvider{
  id="gemini";
  canHandle(){return true;}
  async execute(request:AgentRequest){
+  if(privacyScreen(request.input)) throw new Error("Sensitive data detected. External AI execution was blocked.");
   const key=process.env.GEMINI_API_KEY;
-  const model=process.env.GEMINI_MODEL||"gemini-2.5-flash";
+  const model=process.env.GEMINI_MODEL||"gemini-3.8-flash";
   if(!key)throw new Error("Gemini is not configured.");
-  const response=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":generateContent?key="+encodeURIComponent(key),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({systemInstruction:{parts:[{text:"You are HeySuchi. Execute the requested task concisely. Return a useful artifact when appropriate."}]},contents:[{role:"user",parts:[{text:request.input}]}],generationConfig:{temperature:0.2}})});
+  const response=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":generateContent?key="+encodeURIComponent(key),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({systemInstruction:{parts:[{text:"You are HeySuchi. Execute the requested task concisely. Do not request or reveal secrets. Return a useful artifact when appropriate."}]},contents:[{role:"user",parts:[{text:request.input}]}],generationConfig:{temperature:0.2}})});
   if(!response.ok)throw new Error("Gemini provider request failed.");
   const data=await response.json();
   const content=data?.candidates?.[0]?.content?.parts?.map((p:any)=>p?.text||"").join("").trim();
@@ -31,26 +43,44 @@ export class GeminiAgent implements AgentProvider{
  }
 }
 
-export class OpenAICompatibleAgent implements AgentProvider{
- id="env-model";
- constructor(private endpoint:string,private apiKey:string,private model:string){}
+export class OpenAIProvider implements AgentProvider{
+ id="openai";
  canHandle(){return true;}
  async execute(request:AgentRequest){
-  const response=await fetch(this.endpoint,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+this.apiKey},body:JSON.stringify({model:this.model,messages:[{role:"system",content:"You are HeySuchi. Execute the requested task concisely. Return a useful artifact when appropriate."},{role:"user",content:request.input}],temperature:0.2})});
-  if(!response.ok)throw new Error("Agent provider request failed.");
+  if(privacyScreen(request.input))throw new Error("Sensitive data detected. External AI execution was blocked.");
+  const key=process.env.OPENAI_API_KEY;
+  if(!key)throw new Error("OpenAI is not configured.");
+  const model=process.env.OPENAI_MODEL||"gpt-5.6-terra";
+  const response=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({model,input:[{role:"system",content:[{type:"input_text",text:"You are HeySuchi. Execute the requested task concisely. Do not request or reveal secrets. Return a useful artifact when appropriate."}]},{role:"user",content:[{type:"input_text",text:request.input}]}]})});
+  if(!response.ok)throw new Error("OpenAI provider request failed.");
   const data=await response.json();
-  const content=data?.choices?.[0]?.message?.content;
-  if(typeof content!=="string"||!content.trim())throw new Error("Agent provider returned no usable output.");
-  return {summary:content.trim().slice(0,500),artifact:content.trim()};
+  const content=typeof data?.output_text==="string"?data.output_text.trim():"";
+  if(!content)throw new Error("OpenAI returned no usable output.");
+  return {summary:content.slice(0,500),artifact:content};
+ }
+}
+
+export class AnthropicProvider implements AgentProvider{
+ id="anthropic";
+ canHandle(){return true;}
+ async execute(request:AgentRequest){
+  if(privacyScreen(request.input))throw new Error("Sensitive data detected. External AI execution was blocked.");
+  const key=process.env.ANTHROPIC_API_KEY;
+  if(!key)throw new Error("Anthropic is not configured.");
+  const model=process.env.ANTHROPIC_MODEL||"claude-sonnet-4-6";
+  const response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},body:JSON.stringify({model,max_tokens:4096,system:"You are HeySuchi. Execute the requested task concisely. Do not request or reveal secrets. Return a useful artifact when appropriate.",messages:[{role:"user",content:request.input}]})});
+  if(!response.ok)throw new Error("Anthropic provider request failed.");
+  const data=await response.json();
+  const content=data?.content?.map((p:any)=>p?.type==="text"?p.text:"").join("").trim();
+  if(!content)throw new Error("Anthropic returned no usable output.");
+  return {summary:content.slice(0,500),artifact:content};
  }
 }
 
 export function createAgentRouter(){
  const providers:AgentProvider[]=[];
- const endpoint=process.env.SUCHI_MODEL_ENDPOINT;
- const key=process.env.SUCHI_MODEL_API_KEY;
- const model=process.env.SUCHI_MODEL_NAME;
- if(endpoint&&key&&model)providers.push(new OpenAICompatibleAgent(endpoint,key,model));
+ if(process.env.OPENAI_API_KEY)providers.push(new OpenAIProvider());
+ if(process.env.ANTHROPIC_API_KEY)providers.push(new AnthropicProvider());
  if(process.env.GEMINI_API_KEY)providers.push(new GeminiAgent());
  providers.push(new DeterministicAgent());
  return new AgentRouter(providers);
