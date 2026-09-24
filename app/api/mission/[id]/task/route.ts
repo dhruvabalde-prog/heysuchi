@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "../../../../../../lib/supabase/admin";
-import { requireIdentity } from "../../../../../../lib/auth";
+import { getSupabaseAdmin } from "../../../../lib/supabase/admin";
+import { requireIdentity } from "../../../../lib/auth";
 export async function PATCH(request:Request,{params}:{params:Promise<{id:string}>}) {
  const {id}=await params; const body=await request.json(); const taskId=String(body.taskId??""); const status=String(body.status??"");
  if(!taskId||!["queued","working","needs_you","verified","blocked","done"].includes(status))return NextResponse.json({error:"Invalid task update."},{status:400});
