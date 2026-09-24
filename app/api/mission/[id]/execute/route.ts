@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "../../../../../../lib/supabase/server";
+import { getSupabaseAdmin } from "../../../../../../lib/supabase/admin";
+import { requireIdentity } from "../../../../../../lib/auth";
 import { needsApproval, type ApprovalMode, type ApprovalRuleKey } from "../../../../../../lib/decision";
 import { inferCapability } from "../../../../../../lib/task-graph";
 import { MissionExecutor } from "../../../../../../lib/executor";
@@ -18,10 +19,10 @@ function policyFromSettings(settings:any){
 
 export async function POST(_:Request,{params}:{params:Promise<{id:string}>}) {
  const {id}=await params;
- const supabase=await createSupabaseServerClient();
- const {data:{user}}=await supabase.auth.getUser();
- if(!user)return NextResponse.json({error:"Sign in required."},{status:401});
- const {data:mission}=await supabase.from("missions").select("id,owner_id,title,raw_input").eq("id",id).eq("owner_id",user.id).single();
+ const identity=await requireIdentity();
+ if(!identity)return NextResponse.json({error:"Sign in required."},{status:401});
+ const supabase=getSupabaseAdmin();
+ const {data:mission}=await supabase.from("missions").select("id,owner_id,title,raw_input").eq("id",id).eq("owner_id",identity.id).single();
  if(!mission)return NextResponse.json({error:"Mission not found."},{status:404});
  const {data:settings}=await supabase.from("user_settings").select("data").eq("user_id",user.id).eq("realm","personal").maybeSingle();
  const policy=policyFromSettings(settings);
@@ -39,7 +40,7 @@ export async function POST(_:Request,{params}:{params:Promise<{id:string}>}) {
  }
  const {data:started,error:startError}=await supabase.from("mission_tasks").update({status:"working"}).eq("id",task.id).eq("mission_id",id).eq("status","queued").select("id,title,status,position").single();
  if(startError)return NextResponse.json({error:startError.message},{status:500});
- await supabase.from("missions").update({status:"working",next_action:"Suchi is working on: "+task.title}).eq("id",id).eq("owner_id",user.id);
+ await supabase.from("missions").update({status:"working",next_action:"Suchi is working on: "+task.title}).eq("id",id).eq("owner_id",identity.id);
 
  const executor=new MissionExecutor(createAgentRouter());
  const result=await executor.run({missionId:id,taskId:task.id,capability:inferCapability(task.title),input:mission.raw_input+"\n\nCurrent task: "+task.title});
@@ -61,6 +62,6 @@ export async function POST(_:Request,{params}:{params:Promise<{id:string}>}) {
  await supabase.from("mission_tasks").update({status:"verified"}).eq("id",task.id).eq("mission_id",id);
  const {data:allTasks}=await supabase.from("mission_tasks").select("id,status,position,title,depends_on").eq("mission_id",id).order("position");
  const state=deriveMissionState((allTasks??[]).map(t=>({...t,dependsOn:t.depends_on??[]})));
- await supabase.from("missions").update({progress:state.progress,status:state.status,next_action:state.nextAction}).eq("id",id).eq("owner_id",user.id);
+ await supabase.from("missions").update({progress:state.progress,status:state.status,next_action:state.nextAction}).eq("id",id).eq("owner_id",identity.id);
  return NextResponse.json({task:{...started,status:"verified"},summary:result.summary,artifact,state});
 }
