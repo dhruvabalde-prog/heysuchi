@@ -11,7 +11,7 @@ export async function createMission(input: { raw: string; title: string; domain:
     if (created.error) throw created.error;
     workspace = created.data;
   }
-  const result = await supabase.from("missions").insert({ workspace_id: workspace.id, owner_id: user.id, title: input.title, raw_input: input.raw, domain: input.domain, status: "working", progress: 8, next_action: input.nextAction }).select("*").single();
+  const result = await supabase.from("missions").insert({ workspace_id: workspace.id, owner_id: user.id, title: input.title, raw_input: input.raw, domain: input.domain, status: "queued", progress: 0, next_action: input.nextAction }).select("*").single();
   if (result.error) throw result.error;
   return result.data;
 }
@@ -28,6 +28,12 @@ export async function saveMissionPlan(missionId: string, tasks: Array<{ title: s
   if (taskResult.error) throw taskResult.error;
   const artifactResult = await supabase.from("mission_artifacts").insert({ mission_id: missionId, name: artifact.name, kind: artifact.kind, title: artifact.title, summary: artifact.summary, content: artifact.content }).select("id").single();
   if (artifactResult.error) throw artifactResult.error;
+  const completed = rows.filter((row) => row.status === "done").length;
+  const progress = rows.length ? Math.round((completed / rows.length) * 100) : 0;
+  const status = rows.length && completed === rows.length ? "done" : "working";
+  const nextAction = rows.find((row) => row.status !== "done")?.title ?? "Mission complete.";
+  const { error: missionUpdateError } = await supabase.from("missions").update({ progress, status, next_action: nextAction }).eq("id", missionId).eq("owner_id", user.id);
+  if (missionUpdateError) throw missionUpdateError;
   return true;
 }
 
