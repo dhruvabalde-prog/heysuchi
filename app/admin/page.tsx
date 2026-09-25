@@ -1,42 +1,76 @@
-import { redirect } from "next/navigation";
-import { getAdminContext } from "../../lib/admin";
-import { getSupabaseAdmin } from "../../lib/supabase/admin";
+"use client";
 
-const roles = [
-  ["super_admin","Super Admin"],["admin","Admin"],["operator","Operator"],
-  ["support","Support"],["ai_manager","AI Manager"],["integration_manager","Integration Manager"]
+import { useState } from 'react';
+
+const APP_FEATURES = [
+  { id: 'myDay', name: 'My Day (Daily Core)', desc: 'Ultradian timelines and non-negotiables.' },
+  { id: 'actions', name: 'Actions (Doomscroll UI)', desc: '1-Tap decision card viewport.' },
+  { id: 'suchi', name: 'Suchi Main Orchestrator', desc: 'Central command gateway.' },
+  { id: 'chats', name: 'Chats', desc: 'Agent & Team/Family communication channels.' },
+  { id: 'goals', name: 'Goals (Missions)', desc: 'AI-planned outcomes and timelines.' },
+  { id: 'vault', name: 'Vault (Artifacts)', desc: 'Google Drive connected document storage.' },
+  { id: 'settings', name: 'Settings (Sovereignty)', desc: 'Autonomy toggles and integrations.' },
+  { id: 'voiceInput', name: 'Voice Input', desc: 'Tap-to-hold persistent mic.' },
+  { id: 'cameraVision', name: 'Computer Vision', desc: 'Real-time contextual visual capture.' },
+  { id: 'googleWorkspace', name: 'Google Workspace', desc: 'Enable Docs, Sheets, Calendar, Gmail.' },
+  { id: 'chatgptPlugins', name: 'ChatGPT Plugins', desc: 'Access third-party API tool executions.' },
+  { id: 'agentAutonomy', name: 'Full Agent Autonomy', desc: 'DANGEROUS: Agents execute without asking.', warning: true },
 ];
 
-export default async function AdminPage() {
-  const context = await getAdminContext();
-  if (!context) redirect("/");
-  const supabase = getSupabaseAdmin();
-  const [{ count: missions }, { count: users }, { count: blocked }, { data: members }] = await Promise.all([
-    supabase.from("missions").select("id", { count: "exact", head: true }),
-    supabase.from("auth_identities").select("id", { count: "exact", head: true }),
-    supabase.from("missions").select("id", { count: "exact", head: true }).eq("status","blocked"),
-    supabase.from("platform_admin_members").select("identity_id,created_at,auth_identities(email,display_name),platform_roles(key,name)").order("created_at")
-  ]);
+export default function AdminPanel() {
+  // Initialize all to true for prototype
+  const [flags, setFlags] = useState<Record<string, boolean>>(
+    APP_FEATURES.reduce((acc, feat) => ({ ...acc, [feat.id]: true }), {})
+  );
 
-  return <main style={{padding:"32px",maxWidth:1200,margin:"0 auto"}}>
-    <p>HEY SUCHI / COMMAND CENTER</p>
-    <h1>Command Center</h1>
-    <p>{context.identity.email} · {context.role}</p>
-    <section style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginTop:32}}>
-      {[["Users",users??0],["Missions",missions??0],["Blocked",blocked??0],["Permissions",context.permissions.length]].map(([label,value])=><div key={String(label)} style={{padding:20,border:"1px solid #ddd",borderRadius:16}}><strong>{label}</strong><div style={{fontSize:32,marginTop:8}}>{value}</div></div>)}
-    </section>
-    <section style={{marginTop:40}}>
-      <h2>Platform access</h2>
-      <p>Roles are HeySuchi permissions, separate from Google OAuth scopes.</p>
-      <div style={{display:"grid",gap:10}}>
-        {roles.map(([key,name])=><div key={key} style={{padding:14,border:"1px solid #eee",borderRadius:12}}><strong>{name}</strong><span style={{marginLeft:12,opacity:.6}}>{key}</span></div>)}
-      </div>
-    </section>
-    <section style={{marginTop:40}}>
-      <h2>Current admins</h2>
-      <div style={{display:"grid",gap:10}}>
-        {(members??[]).map((m:any)=>{const i=Array.isArray(m.auth_identities)?m.auth_identities[0]:m.auth_identities;const r=Array.isArray(m.platform_roles)?m.platform_roles[0]:m.platform_roles;return <div key={m.identity_id} style={{padding:14,border:"1px solid #eee",borderRadius:12}}>{i?.email} · {r?.name}</div>})}
-      </div>
-    </section>
-  </main>;
+  const toggleFlag = (key: string) => {
+    setFlags(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  return (
+    <div className="space-y-10 pt-6 pb-20 max-w-2xl mx-auto">
+      
+      {/* Header */}
+      <section className="shrink-0 flex items-center justify-between">
+        <h1 className="text-4xl font-serif italic text-slate-900 dark:text-white tracking-tight leading-tight">
+          Superapp Operations
+        </h1>
+        <div className="px-3 py-1 bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400 rounded-full text-xs font-black uppercase tracking-widest border border-red-200 dark:border-red-500/20">
+          Admin Terminal
+        </div>
+      </section>
+
+      <section className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 rounded-2xl p-5">
+         <h3 className="text-indigo-900 dark:text-indigo-400 font-bold text-sm mb-1">Global Feature Matrix</h3>
+         <p className="text-indigo-700 dark:text-indigo-500/80 text-xs leading-relaxed">
+           Toggle these flags to enable or restrict specific features for active users. Disabling a feature removes it entirely from the user interface.
+         </p>
+      </section>
+
+      {/* Feature Flags List */}
+      <section className="space-y-4">
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-[2rem] p-4 divide-y divide-slate-100/50 dark:divide-slate-800 border border-slate-200/50 dark:border-slate-800 shadow-sm">
+          
+          {APP_FEATURES.map((feat) => (
+             <div key={feat.id} className="flex items-center justify-between py-4">
+               <div className="pr-4">
+                 <h4 className={`font-semibold \${feat.warning ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-slate-100'}`}>
+                   {feat.name}
+                 </h4>
+                 <p className="text-sm text-slate-500 dark:text-slate-400">{feat.desc}</p>
+               </div>
+               <button 
+                 onClick={() => toggleFlag(feat.id)} 
+                 className={`w-14 h-7 shrink-0 rounded-full relative shadow-inner transition-colors \${flags[feat.id] ? (feat.warning ? 'bg-red-500' : 'bg-indigo-500') : 'bg-slate-300 dark:bg-slate-600'}`}
+               >
+                 <div className={`w-6 h-6 bg-white rounded-full absolute top-0.5 shadow-sm transition-all \${flags[feat.id] ? 'right-0.5' : 'left-0.5'}`}></div>
+               </button>
+             </div>
+          ))}
+
+        </div>
+      </section>
+
+    </div>
+  );
 }
