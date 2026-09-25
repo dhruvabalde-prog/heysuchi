@@ -17,7 +17,7 @@ export default function MissionPage(){
  if(!mission)return <main className={styles.emptyPage}><span className={styles.logo}><img src="/heysuchi-mark.svg" alt=""/></span><h1>No mission yet.</h1><p>{error||"Tell Suchi an outcome and it will appear here."}</p><a href="/">← Back to Suchi</a></main>;
  const statusText=mission.status==="needs_you"?"Needs you":mission.status==="done"||mission.status==="completed"?"Complete":"Working";
  return <main className={styles.page}>
-  <header className={styles.header}><a href="/" className={styles.back}>‹</a><div><span>HeySuchi</span><small>{mission.domain} · Mission</small></div><button onClick={refresh}>↻</button></header>
+  <header className={styles.header}><a href="/" className={styles.back}>‹</a><div><span>Mission</span><small>{mission.domain} · {statusText}</small></div><button onClick={refresh} aria-label="Refresh mission">↻</button></header>
   <section className={styles.titleBlock}><span className={styles.status}>{statusText}</span><h1>{mission.title}</h1><p>{mission.raw}</p><div className={styles.progress}><i style={{width:mission.progress+"%"}}/></div><small>{mission.progress}% complete</small></section>
   <section className={styles.chat}>
    <div className={styles.systemMessage}><span className={styles.avatar}><img src="/heysuchi-mark.svg" alt=""/></span><div><strong>Suchi</strong><p>{mission.nextAction}</p><time>Now</time></div></div>
