@@ -54,6 +54,7 @@ export default function Home() {
   const [dayFilter, setDayFilter] = useState("North Stars");
   const [actionFilter, setActionFilter] = useState("All");
   const [chatTab, setChatTab] = useState<"Me" | "Team">("Me");
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/mission", { cache: "no-store" })
@@ -137,7 +138,7 @@ export default function Home() {
           <Logo /><span>HeySuchi</span>
         </button>
         <div className="topActions">
-          <button className="iconButton" onClick={() => router.push("/activity")} aria-label="Notifications">♧<i /></button>
+          <div className="notificationWrap"><button className="iconButton" onClick={() => setNotificationsOpen((v) => !v)} aria-label="Notifications">♧<i /></button>{notificationsOpen && <div className="notificationMenu"><div className="notificationHead"><strong>Notifications</strong><button onClick={() => setNotificationsOpen(false)}>×</button></div><div className="notificationItem"><span>✦</span><div><strong>Suchi is ready</strong><p>Open Actions to see what needs you.</p></div></div><button className="notificationLink" onClick={() => { setNotificationsOpen(false); router.push("/activity"); }}>View activity →</button></div>}</div>
           <button className="profileButton" onClick={() => router.push("/settings")} aria-label="Profile and settings">D</button>
         </div>
       </header>
@@ -190,7 +191,6 @@ export default function Home() {
           <div className="tabPage suchiPage">
             <div className="suchiGlow" />
             <div className="pageIntro centred">
-              <span className="aiBadge"><Logo /></span>
               <p className="eyebrow">YOUR EXECUTION LAYER</p>
               <h1>What are we<br /><em>getting done?</em></h1>
               <p>Tell Suchi the outcome. She'll work out the steps, do the work, and come back only when a decision is yours.</p>
@@ -241,7 +241,7 @@ export default function Home() {
 
       <button className="floatingCreate" onClick={() => setTab("suchi")} aria-label="Tell Suchi">+</button>
       <nav className="bottomNav">
-        {nav.map((item) => <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => setTab(item.id)} disabled={item.id === "goals"}><span>{item.icon}</span><small>{item.label}</small>{item.id === "goals" && <i>⌁</i>}</button>)}
+        {nav.map((item) => <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => setTab(item.id)} disabled={item.id === "goals"}><span>{item.icon}</span><small className={item.id === "suchi" ? "srOnly" : ""}>{item.label}</small>{item.id === "goals" && <i>⌁</i>}</button>)}
       </nav>
     </main>
   );
