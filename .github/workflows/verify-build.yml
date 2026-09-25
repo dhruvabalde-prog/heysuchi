@@ -9,7 +9,87 @@ permissions:
   contents: write
 
 jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add PRD
+        run: |
+          cat > PRODUCT_REQUIREMENTS_DOCUMENT.md <<'EOF'
+# HeySuchi Product Requirements Document
+## Product vision
+HeySuchi is an operating system for getting things done across Life and Work. A user gives an outcome by voice or text; HeySuchi turns it into a persistent Mission, decomposes work into tasks, routes tasks to AI agents and authorized connectors, verifies results, asks the human only when needed, and delivers the outcome.
+
+## Core loop
+Voice/Text Dump → Understand → Mission → Task Graph → Agent Routing → Execution → Artifact → Verification → Human Decision if needed → Continue → Done.
+
+## Communication
+Default chat output is concise: one-line updates, compact choices, and one clear question when blocked. Detailed plans, research, evidence, logs and reasoning belong in durable artifacts such as Markdown.
+
+## Human attention
+North-star metric: human minutes required per completed outcome. Optimize for completed outcomes per unit of human attention.
+
+## Worlds
+- Life: household, family, personal administration, travel, planning.
+- Work: job, business, projects, teams, documents, operations.
+
+## Mission
+Persistent fields include goal, raw input, domain, status, progress, next action, tasks, artifacts, decisions, approvals and verification.
+
+## Agent relay
+Agents communicate through handoff artifacts, not giant conversation histories. A downstream agent receives the upstream result, relevant artifact, unresolved questions and verification state. Provider routing is capability-based and privacy-aware.
+
+## Providers
+OpenAI and Gemini are active provider foundations. Anthropic is architecturally supported but can remain disabled until API access is funded/configured. Provider model names remain configurable.
+
+## Connectors
+Settings → Connectors & Integrations. Every connector is off by default. Switching one on starts provider-specific OAuth and requests only the scopes needed by that connector. Credentials are encrypted server-side and never passed to models.
+
+Initial Google connectors:
+- Gmail
+- Calendar
+- Drive
+- Docs
+- Sheets
+- Slides
+- Chat
+
+Microsoft integration should use Microsoft Entra OAuth/delegated consent for user data rather than treating a generic API key as user authorization.
+
+## Admin
+Main app and admin surface are separate. RBAC roles:
+Super Admin, Admin, Operator, Support, AI Manager, Integration Manager.
+Permissions cover dashboard, users, missions, AI, integrations, security, settings and audit.
+
+## Approval
+User controls autonomy: approval, selected approvals, or direct execution. Sensitive or irreversible external side effects remain policy-gated.
+
+## Security
+Server-only provider secrets; encrypted OAuth credentials; secure opaque sessions; ownership checks; RLS; RBAC; audit logging; rate limiting; privacy screening; no raw credentials in prompts or artifacts.
+
+## Launch
+Initial cohort: 10 users. Scale target: 100 users without changing the fundamental architecture. Focus on reliability, OAuth correctness, agent relay, connector reliability, verification and human-attention reduction.
+
+## Definition of done
+A user can sign in, create and execute Missions, relay work between agents, receive artifacts, answer decisions, connect/disconnect Google apps independently, configure autonomy, and access an authorized admin Command Center.
+EOF
+          cat > README_ARCHIVE.md <<'EOF'
+# HeySuchi source archive
+This bundle contains the repository source plus the Product Requirements Document. No secrets are included. Configure API keys and OAuth credentials through deployment environment variables.
+EOF
+      - name: Package source
+        run: |
+          mkdir -p release
+          git archive --format=zip --output=release/heysuchi-source.zip HEAD
+          zip -j release/heysuchi-complete-source-and-prd.zip release/heysuchi-source.zip PRODUCT_REQUIREMENTS_DOCUMENT.md README_ARCHIVE.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heysuchi-complete-source-and-prd
+          path: release/heysuchi-complete-source-and-prd.zip
+          if-no-files-found: error
+
   build:
+    needs: package
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,19 +112,3 @@ jobs:
         run: npx tsc --noEmit
       - name: Build
         run: npm run build
-      - name: Package source and PRD
-        if: always()
-        run: |
-          mkdir -p release
-          cp PRODUCT_REQUIREMENTS_DOCUMENT.md release/ 2>/dev/null || true
-          cp README_ARCHIVE.md release/ 2>/dev/null || true
-          git archive --format=zip --output=release/heysuchi-source.zip HEAD
-          cd release
-          zip -r heysuchi-complete-source-and-prd.zip heysuchi-source.zip PRODUCT_REQUIREMENTS_DOCUMENT.md README_ARCHIVE.md
-      - name: Upload source bundle
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: heysuchi-complete-source-and-prd
-          path: release/heysuchi-complete-source-and-prd.zip
-          if-no-files-found: error
