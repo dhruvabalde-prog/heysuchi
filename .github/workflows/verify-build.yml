@@ -32,3 +32,19 @@ jobs:
         run: npx tsc --noEmit
       - name: Build
         run: npm run build
+      - name: Package source and PRD
+        if: always()
+        run: |
+          mkdir -p release
+          cp PRODUCT_REQUIREMENTS_DOCUMENT.md release/ 2>/dev/null || true
+          cp README_ARCHIVE.md release/ 2>/dev/null || true
+          git archive --format=zip --output=release/heysuchi-source.zip HEAD
+          cd release
+          zip -r heysuchi-complete-source-and-prd.zip heysuchi-source.zip PRODUCT_REQUIREMENTS_DOCUMENT.md README_ARCHIVE.md
+      - name: Upload source bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: heysuchi-complete-source-and-prd
+          path: release/heysuchi-complete-source-and-prd.zip
+          if-no-files-found: error
