@@ -55,7 +55,7 @@ export default function Home() {
   const [actionFilter, setActionFilter] = useState("All");
   const [chatTab, setChatTab] = useState<"Me" | "Team">("Me");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
 
   useEffect(() => {
     fetch("/api/mission", { cache: "no-store" })
