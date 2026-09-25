@@ -27,8 +27,8 @@ export default function Settings(){
  async function logout(){await fetch("/api/auth/logout",{method:"POST"});location.href="/auth";}
  return <main className={styles.page}>
    <header className={styles.header}><a href="/" className={styles.back}>←</a><div><p className="eyebrow">SETTINGS</p><h1>Settings</h1></div></header>
-   <section className={styles.account}><div className={styles.avatar}>D</div><div><strong>{email||"Your account"}</strong><small>HeySuchi account</small></div></section>
    <a className={styles.googleCard} href="/api/auth/google"><span className={styles.googleIcon}>G</span><div><strong>Connect Google account</strong><small>Gmail · Calendar · Tasks · Drive</small></div><b>→</b></a>
+   <section className={styles.account}><div className={styles.avatar}>D</div><div><strong>{email||"Your account"}</strong><small>HeySuchi account</small></div></section>
    {error&&<div className={styles.error}>{error}</div>}
    <section className={styles.section}><p className="eyebrow">PREFERENCES</p>
      <div className={styles.card}>
