@@ -191,10 +191,9 @@ export default function Home() {
         {tab === "suchi" && (
           <div className="tabPage suchiPage">
             <div className="suchiGlow" />
-            <div className="pageIntro centred">
-              <p className="eyebrow">YOUR EXECUTION LAYER</p>
-              <h1>What are we<br /><em>getting done?</em></h1>
-              <p>Tell Suchi the outcome. She'll work out the steps, do the work, and come back only when a decision is yours.</p>
+            <div className="pageIntro centred suchiIntro">
+              <h1>What are we <em>getting done?</em></h1>
+              <p>Tell Suchi the outcome. She'll work out the steps and come back when a decision is yours.</p>
             </div>
             <div className={listening ? "composer listening" : "composer"}>
               <textarea value={dump} onChange={(e) => setDump(e.target.value)} placeholder="Tell Suchi anything…" rows={4} />
